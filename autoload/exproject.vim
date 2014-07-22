@@ -1,5 +1,5 @@
 " variables {{{1
-let s:cur_project_file = "" 
+let s:cur_project_file = ""
 
 let s:file_filters = []
 let s:file_ignore_patterns = []
@@ -34,7 +34,7 @@ endfunction
 function s:getname( linenr )
     let line = getline(a:linenr)
     " let line = substitute(line,'.\{-}\[.\{-}\]\(.\{-}\)','\1','')
-    let line = substitute(line,'.\{-}-\(\[F\]\)\{0,1}\(.\{-}\)','\2','')
+    let line = substitute(line,'.\{-}-\(\[F\]\s\)\{0,1}\(.\{-}\)','\2','')
     let idx_end_1 = stridx(line,' {')
     let idx_end_2 = stridx(line,' }')
     if idx_end_1 != -1
@@ -52,7 +52,7 @@ function s:getpath( linenr )
     let fullpath = ""
 
     " recursively make full path
-    if match(getline(a:linenr),'[^^]-\C\[F\]') != -1
+    if match(getline(a:linenr),'[^^]-\C\[F\]\s') != -1
         let fullpath = s:getname( a:linenr )
     endif
 
@@ -61,7 +61,7 @@ function s:getpath( linenr )
     while foldlevel > 1 " don't parse level:0
         let foldlevel -= 1
         let level_pattern = repeat('.',foldlevel*2)
-        let fold_pattern = '^'.level_pattern.'-\C\[F\]'
+        let fold_pattern = '^'.level_pattern.'-\C\[F\]\s'
         let searchpos = s:search_for_pattern(searchpos , fold_pattern)
         if searchpos
             let fullpath = s:getname(searchpos).'/'.fullpath
@@ -130,14 +130,14 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
         while list_count <= list_last
             " remove not fit file types
             if isdirectory(file_list[list_idx]) == 0
-                let suffix = fnamemodify ( file_list[list_idx], ':e' ) 
+                let suffix = fnamemodify ( file_list[list_idx], ':e' )
                 if suffix == ''
                     let suffix = '__EMPTY__'
                 endif
-                let filename = fnamemodify ( file_list[list_idx], ':t' ) 
+                let filename = fnamemodify ( file_list[list_idx], ':t' )
                 " move the file to the end of the list
 
-                if (a:file_ignore_pattern == "" || match ( filename, a:file_ignore_pattern) == -1) && match ( suffix, a:file_pattern ) != -1 
+                if (a:file_ignore_pattern == "" || match ( filename, a:file_ignore_pattern) == -1) && match ( suffix, a:file_pattern ) != -1
                     let file = remove(file_list,list_idx)
                     silent call add(file_list, file)
                 else " if not found file type in file filter
@@ -146,13 +146,13 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
                 let list_idx -= 1
 
             elseif a:folder_pattern != '' " remove not fit dirs
-                " if include && not found in pattner 
-                if a:folder_include 
+                " if include && not found in pattner
+                if a:folder_include
                     if match( file_list[list_idx], a:folder_pattern ) == -1
                         silent call remove(file_list,list_idx)
                         let list_idx -= 1
                     endif
-                " if exclude && found in pattner 
+                " if exclude && found in pattner
                 else
                     if match( file_list[list_idx], a:folder_pattern ) != -1
                         silent call remove(file_list,list_idx)
@@ -160,13 +160,13 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
                     endif
                 endif
 
-            " DISABLE: in our case, globpath never search hidden folder. { 
+            " DISABLE: in our case, globpath never search hidden folder. {
             " elseif len (s:level_list) == 0 " in first level directory, if we .vimfiles* folders, remove them
             "     if match( file_list[list_idx], '\<.vimfiles.*' ) != -1
             "         silent call remove(file_list,list_idx)
             "         let list_idx -= 1
             "     endif
-            " } DISABLE end 
+            " } DISABLE end
             endif
 
             "
@@ -187,7 +187,7 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
             if s:build_tree(
                         \ file_list[list_idx],
                         \ a:file_pattern,
-                        \ a:file_ignore_pattern, 
+                        \ a:file_ignore_pattern,
                         \ s:folder_filter_root_only ? '' : a:folder_pattern,
                         \ a:folder_include,
                         \ a:filename_list
@@ -233,11 +233,11 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
     " judge if it is a dir
     if isdirectory(a:entry_path) == 0
         " if file_end enter a new line for it
-        if end_fold != ''
-            let end_space = strpart(space,0,strridx(space,'-')-1)
-            let end_space = strpart(end_space,0,strridx(end_space,'|')+1)
-            silent put! = end_space " . end_fold
-        endif
+        " if end_fold != ''
+        "     let end_space = strpart(space,0,strridx(space,'-')-1)
+        "     let end_space = strpart(end_space,0,strridx(end_space,'|')+1)
+        "     silent put! = end_space " . end_fold
+        " endif
 
         " put it
         " let file_type = strpart( short_dir, strridx(short_dir,'.')+1, 1 )
@@ -253,19 +253,10 @@ function s:build_tree( entry_path, file_pattern, file_ignore_pattern, folder_pat
 
         "silent put = strpart(space, 0, strridx(space,'\|-')+1)
         if len(file_list) == 0 " if it is a empty directory
-            if end_fold == ''
-                " if dir_end enter a new line for it
-                let end_space = strpart(space,0,strridx(space,'-'))
-            else
-                " if dir_end enter a new line for it
-                let end_space = strpart(space,0,strridx(space,'-')-1)
-                let end_space = strpart(end_space,0,strridx(end_space,'|')+1)
-            endif
             let end_fold = end_fold . ' }'
-            silent put! = end_space
-            silent put! = space.'[F]'.short_dir . ' {' . end_fold
+            silent put! = space.'[F] '.short_dir . ' {' . end_fold
         else
-            silent put! = space.'[F]'.short_dir . ' {'
+            silent put! = space.'[F] '.short_dir . ' {'
         endif
     endif
 
@@ -338,15 +329,15 @@ endfunction
 " exproject#open_window {{{2
 
 function exproject#init_buffer()
-    " NOTE: ex-project window open can happen during VimEnter. According to  
+    " NOTE: ex-project window open can happen during VimEnter. According to
     " Vim's documentation, event such as BufEnter, WinEnter will not be triggered
     " during VimEnter.
     " When I open exproject window and read the file through vimentry scripts,
     " the events define in exproject/ftdetect/exproject.vim will not execute.
     " I guess this is because when you are in BufEnter event( the .vimentry
     " enters ), and open the other buffers, the Vim will not trigger other
-    " buffers' event 
-    " This is why I set the filetype manually here. 
+    " buffers' event
+    " This is why I set the filetype manually here.
     set filetype=exproject
     au! BufWinLeave <buffer> call <SID>on_close()
 
@@ -380,8 +371,8 @@ function exproject#open_window()
 
     let winnr = bufwinnr(s:cur_project_file)
     if winnr == -1
-        call ex#window#open( 
-                    \ s:cur_project_file, 
+        call ex#window#open(
+                    \ s:cur_project_file,
                     \ g:ex_project_winsize,
                     \ g:ex_project_winpos,
                     \ 0,
@@ -431,10 +422,10 @@ endfunction
 
 " exproject#on_save {{{2
 function exproject#on_save()
-    if s:help_open 
+    if s:help_open
         let cursor_line = line('.')
         let cursor_col = col('.')
-        let cursor_line = cursor_line - (len(s:help_text) - len(s:help_text_short)) 
+        let cursor_line = cursor_line - (len(s:help_text) - len(s:help_text_short))
 
         call exproject#toggle_help()
 
@@ -444,10 +435,10 @@ function exproject#on_save()
 endfunction
 
 " exproject#foldtext {{{2
-" This functions used in ftplugin/exproject.vim for 'setlocal foldtext=' 
+" This functions used in ftplugin/exproject.vim for 'setlocal foldtext='
 function exproject#foldtext()
     let line = getline(v:foldstart)
-    let line = substitute(line,'\[F\]\(.\{-}\) {.*','\[+\]\1 ','')
+    let line = substitute(line,'\[F\]\s\(.\{-}\) {.*','\[+\]\1 ','')
     return line
 endfunction
 
@@ -455,7 +446,7 @@ endfunction
 " modifier: '' or 'shift'
 function exproject#confirm_select(modifier)
     " check if the line is valid file line
-    let curline = getline('.') 
+    let curline = getline('.')
     if match(curline, '-\(\C\[.*\]\)\{0,1}') == -1
         call ex#warning('Please select a folder/file')
         return
@@ -471,7 +462,7 @@ function exproject#confirm_select(modifier)
     let cursor_col = col('.')
 
     " if this is a fold, do fold operation or open the path by terminal
-    if foldclosed('.') != -1 || match(curline, '\C\[F\]') != -1
+    if foldclosed('.') != -1 || match(curline, '\C\[F\]\s') != -1
         if a:modifier == 'shift'
             call ex#os#open(s:getpath(cursor_line))
         else
@@ -495,8 +486,8 @@ function exproject#confirm_select(modifier)
         " call ex#hint('load quick fix list: ' . fullpath)
         " call exUtility#GotoPluginBuffer()
         " silent exec 'QF '.fullpath
-        " " NOTE: when open error by QF, we don't want to exec exUtility#OperateWindow below ( we want keep stay in the exQF plugin ), so return directly 
-        return 
+        " " NOTE: when open error by QF, we don't want to exec exUtility#OperateWindow below ( we want keep stay in the exQF plugin ), so return directly
+        return
     elseif filetype == 'exe'
         " TODO:
         " call ex#hint('debug ' . fullpath)
@@ -542,17 +533,17 @@ function exproject#build_tree()
     let file_filter_pattern = ex#pattern#last_words(s:file_filters)
     let foder_filter_patern = ex#pattern#last_words(s:folder_filters)
     let file_ignore_pattern = ex#pattern#files(s:file_ignore_patterns)
-    call s:build_tree( 
-                \ entry_dir, 
-                \ file_filter_pattern, 
-                \ file_ignore_pattern, 
-                \ foder_filter_patern, 
+    call s:build_tree(
+                \ entry_dir,
+                \ file_filter_pattern,
+                \ file_ignore_pattern,
+                \ foder_filter_patern,
                 \ s:folder_filter_include,
                 \ filename_list )
 
     silent keepjumps normal! gg
 
-    " add online help 
+    " add online help
     if g:ex_project_enable_help
         silent call append ( 0, s:help_text )
     endif
@@ -622,9 +613,9 @@ endfunction
 function exproject#refresh_current_folder()
     let s:level_list = [] " init level list
 
-    " if the line is neither a file/folder line nor a root folder line, return 
-    let file_line = getline('.') 
-    if match(file_line, '\( |\)\+-\{0,1}.*') == -1 && match(file_line, '-\C\[F\]') == -1
+    " if the line is neither a file/folder line nor a root folder line, return
+    let file_line = getline('.')
+    if match(file_line, '\( |\)\+-\{0,1}.*') == -1 && match(file_line, '-\C\[F\]\s') == -1
         call ex#warning( "Please select a file/folder for refresh" )
         return
     endif
@@ -639,10 +630,10 @@ function exproject#refresh_current_folder()
     let fold_level -= 1
     let level_pattern = repeat('.',fold_level*2)
     let full_path_name = ''
-    let fold_pattern = '^'.level_pattern.'-\C\[F\]'
+    let fold_pattern = '^'.level_pattern.'-\C\[F\]\s'
 
     " get first fold name
-    if match(file_line, '\C\[F\]') == -1
+    if match(file_line, '\C\[F\]\s') == -1
         if search(fold_pattern,'b')
             let full_path_name = s:getname(line('.'))
         else
@@ -672,7 +663,7 @@ function exproject#refresh_current_folder()
         while fold_level > 1
             let fold_level -= 1
             let level_pattern = repeat('.',fold_level*2)
-            let fold_pattern = '^'.level_pattern.'-\C\[F\]'
+            let fold_pattern = '^'.level_pattern.'-\C\[F\]\s'
             if search(fold_pattern,'b')
                 let full_path_name = s:getname(line('.')).'/'.full_path_name
             else
@@ -706,20 +697,20 @@ function exproject#refresh_current_folder()
     if !is_root && s:folder_filter_root_only
         let foder_filter_patern = ''
     endif
-    call s:build_tree( 
-                \ full_path_name, 
-                \ file_filter_pattern, 
-                \ file_ignore_pattern, 
+    call s:build_tree(
+                \ full_path_name,
+                \ file_filter_pattern,
+                \ file_ignore_pattern,
                 \ foder_filter_patern,
                 \ s:folder_filter_include,
-                \ filename_list 
-                \ ) 
+                \ filename_list
+                \ )
 
     " at the end, we need to rename the folder as simple one rename the folder
     let cur_line = getline('.')
 
     " if this is a empty directory, return
-    let pattern = '\C\[F\].*\<' . short_dir . '\> {'
+    let pattern = '\C\[F\]\s.*\<' . short_dir . '\> {'
     if match(cur_line, pattern) == -1
         call ex#warning ('The folder is empty')
         return
@@ -766,7 +757,7 @@ endfunction
 " exproject#newfile {{{2
 function exproject#newfile()
     " check if the line is valid file line
-    let cur_line = getline('.') 
+    let cur_line = getline('.')
     if match(cur_line, '\( |\)\+-.*') == -1
         call ex#warning ("Can't create new file here. Please move your cursor to a file or a folder.")
         return
@@ -779,7 +770,7 @@ function exproject#newfile()
     endif
 
     " if this is directory
-    if match(cur_line, '\C\[F\]') != -1
+    if match(cur_line, '\C\[F\]\s') != -1
         let idx = stridx(cur_line, '}')
         if idx == -1
             silent exec 'normal! j"tyy"tP'
@@ -817,8 +808,8 @@ endfunction
 " exproject#newfolder {{{2
 function exproject#newfolder()
     " check if the line is valid folder line
-    let cur_line = getline('.') 
-    if match(cur_line, '\C\[F\]') == -1
+    let cur_line = getline('.')
+    if match(cur_line, '\C\[F\]\s') == -1
         call ex#warning ("Can't create new folder here, Please move your cursor to a parent folder.")
         return
     endif
@@ -826,14 +817,14 @@ function exproject#newfolder()
     " let foldername = inputdialog( 'Folder Name: ', '' )
     silent echohl Question
     let foldername = input( 'Folder Name: ', '' )
-    silent echohl none 
+    silent echohl none
 
     if foldername == ''
         call ex#warning ("Can't create empty folder.")
         return
     else
         let path = s:getpath(line('.'))
-        if finddir( foldername, path ) != '' 
+        if finddir( foldername, path ) != ''
             call ex#warning (" The folder " . foldername . " already exists!" )
             return
         endif
@@ -847,7 +838,7 @@ function exproject#newfolder()
 
     let reg_t = @t
     if foldclosed('.') != -1
-        silent exec 'normal! j"tyy"t2p$a-[F]' . foldername . ' { }'
+        silent exec 'normal! j"tyy"t2p$a-[F] ' . foldername . ' { }'
         return
     endif
 
@@ -855,15 +846,15 @@ function exproject#newfolder()
     if idx == -1
         let file_line = cur_line
         put = file_line
-        silent call search('-\[F\]','c')
-        silent exec 'normal! c$ |-[F]' . foldername . ' { }'
+        silent call search('-\[F\]\s','c')
+        silent exec 'normal! c$ |-[F] ' . foldername . ' { }'
     else
         let surfix = strpart(cur_line,idx-1)
         silent call setline('.',strpart(cur_line,0,idx-1))
-        let file_line = strpart(cur_line, 0, stridx(cur_line,'-')) 
-                    \ . ' |-[F]' 
-                    \ . foldername 
-                    \ . ' { }' 
+        let file_line = strpart(cur_line, 0, stridx(cur_line,'-'))
+                    \ . ' |-[F] '
+                    \ . foldername
+                    \ . ' { }'
                     \ . surfix
         put = file_line
     endif
