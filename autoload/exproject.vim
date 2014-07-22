@@ -11,10 +11,7 @@ let s:zoom_in = 0
 let s:keymap = {}
 
 let s:help_open = 0
-let s:help_text_short = [
-            \ '" Press <F1> for help',
-            \ '',
-            \ ]
+let s:help_text_short = ['']
 let s:help_text = s:help_text_short
 " }}}
 
@@ -34,7 +31,7 @@ endfunction
 function s:getname( linenr )
     let line = getline(a:linenr)
     " let line = substitute(line,'.\{-}\[.\{-}\]\(.\{-}\)','\1','')
-    let line = substitute(line,'.\{-}-\(\[F\]\s\)\{0,1}\(.\{-}\)','\2','')
+    let line = substitute(line,'.\{-}-\(\[F\]\s\)\{0,1}\s\{0,2}\(.\{-}\)','\2','')
     let idx_end_1 = stridx(line,' {')
     let idx_end_2 = stridx(line,' }')
     if idx_end_1 != -1
@@ -438,7 +435,7 @@ endfunction
 " This functions used in ftplugin/exproject.vim for 'setlocal foldtext='
 function exproject#foldtext()
     let line = getline(v:foldstart)
-    let line = substitute(line,'\[F\]\s\(.\{-}\) {.*','\[+\]\1 ','')
+    let line = substitute(line,'\[F\]\s\(.\{-}\) {.*','\[+\] \1 ','')
     return line
 endfunction
 
